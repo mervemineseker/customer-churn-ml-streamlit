@@ -157,7 +157,6 @@ X = pd.DataFrame([{
 
 
 if st.button("Predict churn probability"):
-    try:
         # Predict
         proba = float(pipe.predict_proba(X)[:, 1][0])
         st.metric("Churn probability", f"{proba * 100:.1f}%")
