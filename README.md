@@ -110,17 +110,11 @@ churn-ml/
 
 
 
-r
-
-Kodu kopyala
+\## How to Run Locally (Windows)
 
 
 
-\## How to run locally (Windows)
-
-
-
-Create and activate a virtual environment:
+\### 1. Create and activate virtual environment
 
 
 
@@ -130,53 +124,59 @@ python -m venv .venv
 
 .venv\\Scripts\\activate
 
-Install dependencies:
+``` 
 
+\### 2. Install dependencies
 
-
-bash
-
-Kodu kopyala
+```bash
 
 pip install -r requirements.txt
 
-Train the model (creates models/churn\_pipeline.joblib):
+``` 
 
+\### 3. Train the model
 
-
-bash
-
-Kodu kopyala
+```bash
 
 python src/train.py
 
-Start the Streamlit app:
+``` 
+
+\### 4. Start the Streamlit app
+
+```bash
+
+streamlit run app/app.py 
+
+``` 
 
 
-
-bash
-
-Kodu kopyala
-
-streamlit run app/app.py
 
 Open the Local URL shown in the terminal (usually http://localhost:8501).
 
 
 
-Screenshots
+📊 Explainability 
+
+The app displays the top drivers of churn for each prediction:
 
 
 
+Positive impact → increases churn risk
 
 
 
+Negative impact → decreases churn risk
 
 
 
-Notes
+This makes the model interpretable and business-friendly.
 
-All preprocessing is handled inside the scikit-learn Pipeline
+
+
+📝 Notes
+
+All preprocessing is handled inside the sklearn Pipeline
 
 
 
@@ -184,17 +184,21 @@ No separate processed files are required
 
 
 
-The project can be extended with:
+Dataset is automatically downloaded on Streamlit Cloud if missing
 
 
 
-Model comparison (e.g. XGBoost)
+Designed as a portfolio-quality ML demo
 
 
 
-Threshold tuning
+👩‍💻 Author
+
+Merve Mine Seker
+
+Data Analyst / Machine Learning Enthusiast
 
 
 
-Monitoring and drift detection
+GitHub: https://github.com/mervemineseker
 
