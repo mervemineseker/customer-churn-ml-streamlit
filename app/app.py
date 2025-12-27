@@ -12,7 +12,7 @@ import streamlit as st
 
 MODEL_PATH = "models/churn_pipeline.joblib"
 RAW_DATA_PATH = "data/raw/WA_Fn-UseC_-Telco-Customer-Churn.csv"
-TELCO_CSV_URL = "https://raw.githubusercontent.com/blastchar/telco-customer-churn/master/WA_Fn-UseC_-Telco-Customer-Churn.csv"
+TELCO_CSV_URL = "https://raw.githubusercontent.com/IBM/telco-customer-churn-on-icp4d/master/data/Telco-Customer-Churn.csv"
 
 
 # ----------------------------
