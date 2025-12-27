@@ -172,9 +172,17 @@ if st.button("Predict churn probability"):
         # Background for SHAP (cloud safe)
         bg_sample = load_background_sample(n=200, seed=42)
 
-        # Explainer on full pipeline (works for many sklearn pipelines)
-        explainer = shap.Explainer(pipe, bg_sample)
+        # Use probability function so SHAP can call the model
+        predict_fn = lambda df: pipe.predict_proba(df)[:, 1]
+
+        bg_sample = load_background_sample(n=200, seed=42)
+
+        explainer = shap.Explainer(predict_fn, bg_sample)
         shap_values = explainer(X)
+
+        sv = shap_values.values[0]
+        feature_names = list(X.columns)  # input feature names
+
 
         sv = shap_values.values[0]
         feature_names = shap_values.feature_names
@@ -182,6 +190,8 @@ if st.button("Predict churn probability"):
         # Top drivers
         top_k = 8
         top_idx = np.argsort(np.abs(sv))[::-1][:top_k]
+
+        feature_names = X.columns.tolist()
 
         top = pd.DataFrame({
             "feature": np.array(feature_names)[top_idx],
