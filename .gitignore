@@ -9,8 +9,6 @@ __pycache__/
 # Data & models
 data/raw/
 data/processed/
-models/
-*.joblib
 
 # OS files
 .DS_Store

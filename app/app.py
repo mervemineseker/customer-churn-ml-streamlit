@@ -29,10 +29,20 @@ st.title("Customer Churn Prediction (Demo)")
 st.caption("Predict churn probability and show approximate explanations using SHAP.")
 
 
+import os
+import subprocess
+import joblib
+import streamlit as st
+
+MODEL_PATH = "models/churn_pipeline.joblib"
+
 @st.cache_resource
 def load_pipeline():
-    return joblib.load(MODEL_PATH)
+    if not os.path.exists(MODEL_PATH):
+        st.warning("Model not found. Training model...")
+        subprocess.run(["python", "src/train.py"], check=True)
 
+    return joblib.load(MODEL_PATH)
 
 @st.cache_data
 def load_background_sample(n: int = 200, seed: int = 42) -> pd.DataFrame:
