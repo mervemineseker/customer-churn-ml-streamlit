@@ -3,6 +3,9 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import shap
+from pathlib import Path
+import urllib.request
+
 
 def prettify_feature_name(name: str) -> str:
     # Remove sklearn prefixes like "num__" or "cat__"
@@ -23,6 +26,8 @@ def prettify_feature_name(name: str) -> str:
 
 MODEL_PATH = "models/churn_pipeline.joblib"
 RAW_DATA_PATH = "data/raw/WA_Fn-UseC_-Telco-Customer-Churn.csv"
+TELCO_CSV_URL = "https://raw.githubusercontent.com/blastchar/telco-customer-churn/master/WA_Fn-UseC_-Telco-Customer-Churn.csv"
+
 
 st.set_page_config(page_title="Churn Predictor", layout="centered")
 st.title("Customer Churn Prediction (Demo)")
@@ -48,6 +53,11 @@ def load_pipeline():
 @st.cache_data
 def load_background_sample(n: int = 200, seed: int = 42) -> pd.DataFrame:
     """Load and preprocess a small background sample for SHAP reference."""
+    raw_path = Path(RAW_DATA_PATH)
+    raw_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if not raw_path.exists():
+        urllib.request.urlretrieve(TELCO_CSV_URL, str(raw_path))
     bg = pd.read_csv(RAW_DATA_PATH)
 
     # Match training preprocessing
