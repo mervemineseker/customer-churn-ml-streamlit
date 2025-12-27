@@ -122,11 +122,11 @@ Negative impact → decreases churn risk
 
 
 
-!\[Risk Level](docs/images/risk\_level.png)
+![Risk Level](docs/images/risk_level.png)
 
-!\[Top reasons](docs/images/top\_reasons.png)
+![Top reasons](docs/images/top_reasons.png)
 
-!\[All top features](docs/images/all\_top\_features.png)
+![All top features](docs/images/all_top_features.png)
 
 
 
