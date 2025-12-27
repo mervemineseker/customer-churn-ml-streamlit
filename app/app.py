@@ -50,26 +50,9 @@ def load_pipeline():
 
     return joblib.load(MODEL_PATH)
 
-@st.cache_data
-def load_background_sample(n: int = 200, seed: int = 42) -> pd.DataFrame:
-    """Load and preprocess a small background sample for SHAP reference."""
-    raw_path = Path(RAW_DATA_PATH)
-    raw_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if not raw_path.exists():
-        urllib.request.urlretrieve(TELCO_CSV_URL, str(raw_path))
-    bg = pd.read_csv(RAW_DATA_PATH)
 
-    # Match training preprocessing
-    if "TotalCharges" in bg.columns:
-        bg["TotalCharges"] = pd.to_numeric(bg["TotalCharges"], errors="coerce")
-    if "customerID" in bg.columns:
-        bg = bg.drop(columns=["customerID"])
-    if "Churn" in bg.columns:
-        bg = bg.drop(columns=["Churn"])
 
-    n = min(n, len(bg))
-    return bg.sample(n=n, random_state=seed)
 
 
 def prettify_feature_name(name: str) -> str:
@@ -191,36 +174,28 @@ if st.button("Predict churn probability"):
         # Transform input
         X_trans = pre.transform(X)
 
-        # Feature names (including one-hot)
-        try:
-            feature_names = pre.get_feature_names_out()
-        except Exception:
-            feature_names = [f"f{i}" for i in range(X_trans.shape[1])]
 
-        # Background for SHAP
-        bg_sample = load_background_sample(n=200, seed=42)
-        bg_trans = pre.transform(bg_sample)
 
-        # SHAP explainer for linear models
-        explainer = shap.LinearExplainer(
-            model,
-            bg_trans,
-            feature_perturbation="interventional",
-        )
 
-        shap_values = explainer.shap_values(X_trans)
-        sv = np.array(shap_values).reshape(-1)
+       # SHAP explanation (cloud-safe, pipeline-level)
+bg_sample = pd.concat([X] * 50, ignore_index=True)
+explainer = shap.Explainer(pipe, bg_sample)
+shap_values = explainer(X)
 
-        # Top drivers
-        top_k = 8
-        top_idx = np.argsort(np.abs(sv))[::-1][:top_k]
+sv = shap_values.values[0]
+feature_names = shap_values.feature_names
 
-        top = pd.DataFrame({
-            "feature": np.array(feature_names)[top_idx],
-            "impact": sv[top_idx],
-        })
+# Top drivers
+top_k = 8
+top_idx = np.argsort(np.abs(sv))[::-1][:top_k]
 
-        # Make features human-friendly
+top = pd.DataFrame({
+    "feature": np.array(feature_names)[top_idx],
+    "impact": sv[top_idx],
+})
+
+
+                # Make features human-friendly
         top["feature"] = top["feature"].astype(str).apply(prettify_feature_name)
 
         # Cards for top 5
