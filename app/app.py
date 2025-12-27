@@ -198,8 +198,8 @@ top = pd.DataFrame({
 top["feature"] = top["feature"].astype(str).apply(prettify_feature_name)
 
         # Cards for top 5
-        top5 = top.head(5).copy()
-        cols = st.columns(5)
+top5 = top.head(5).copy()
+cols = st.columns(5)
 
         for i, (_, row) in enumerate(top5.iterrows()):
             label = str(row["feature"])
