@@ -1,31 +1,34 @@
+# app/app.py
+
 import os
 import subprocess
-from pathlib import Path
-import urllib.request
 
 import joblib
 import numpy as np
 import pandas as pd
-import shap
 import streamlit as st
 
 
 MODEL_PATH = "models/churn_pipeline.joblib"
-RAW_DATA_PATH = "data/raw/WA_Fn-UseC_-Telco-Customer-Churn.csv"
-TELCO_CSV_URL = "https://raw.githubusercontent.com/IBM/telco-customer-churn-on-icp4d/master/data/Telco-Customer-Churn.csv"
 
 
 # ----------------------------
 # Helpers
 # ----------------------------
 def prettify_feature_name(name: str) -> str:
-    """Convert sklearn feature names to human-friendly labels."""
+    """
+    Convert sklearn feature names to human-friendly labels.
+    Examples:
+      - "cat__Contract_Month-to-month" -> "Contract = Month-to-month"
+      - "num__MonthlyCharges" -> "MonthlyCharges"
+    """
+    # Remove sklearn prefixes like "num__" or "cat__"
     if "__" in name:
         _, core = name.split("__", 1)
     else:
         core = name
 
-    # OneHot often looks like "Contract_Month-to-month"
+    # OneHot style often looks like "Contract_Month-to-month"
     if "_" in core:
         parts = core.split("_")
         feature = parts[0]
@@ -56,37 +59,56 @@ def icon_for_feature(label: str) -> str:
 
 @st.cache_resource
 def load_pipeline():
-    """Load model pipeline; if missing, train it first."""
+    """
+    Load the trained pipeline. If missing in Streamlit Cloud, train it once.
+    """
     if not os.path.exists(MODEL_PATH):
         st.warning("Model not found. Training model...")
         subprocess.run(["python", "src/train.py"], check=True)
+
     return joblib.load(MODEL_PATH)
 
 
-@st.cache_data
-def load_background_sample(n: int = 200, seed: int = 42) -> pd.DataFrame:
+def linear_contributions(pipe, X: pd.DataFrame, top_k: int = 8) -> pd.DataFrame:
     """
-    Download (if needed) and load a small background sample for SHAP.
-    Streamlit Cloud-safe.
+    Stable explainability for linear models:
+    contribution_i = x_i * w_i in transformed (preprocessed) feature space.
+
+    Works great for LogisticRegression.
     """
-    raw_path = Path(RAW_DATA_PATH)
-    raw_path.parent.mkdir(parents=True, exist_ok=True)
+    pre = pipe.named_steps["preprocess"]
+    model = pipe.named_steps["model"]
 
-    if not raw_path.exists():
-        urllib.request.urlretrieve(TELCO_CSV_URL, str(raw_path))
+    # Transform single row to model input space
+    X_trans = pre.transform(X)
 
-    df = pd.read_csv(raw_path)
+    # Get transformed feature names (includes one-hot)
+    try:
+        feature_names = pre.get_feature_names_out()
+    except Exception:
+        feature_names = np.array([f"f{i}" for i in range(X_trans.shape[1])], dtype=object)
 
-    # Match training preprocessing (keep features only)
-    if "TotalCharges" in df.columns:
-        df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce")
-    if "customerID" in df.columns:
-        df = df.drop(columns=["customerID"])
-    if "Churn" in df.columns:
-        df = df.drop(columns=["Churn"])
+    # Logistic regression coefficients (shape: [n_features])
+    coef = np.asarray(model.coef_).ravel()
 
-    n = min(n, len(df))
-    return df.sample(n=n, random_state=seed)
+    # Contributions for that row
+    # If sparse, use .multiply; if dense, normal multiply
+    if hasattr(X_trans, "multiply"):
+        contrib = X_trans.multiply(coef).toarray().ravel()
+    else:
+        contrib = (X_trans * coef).ravel()
+
+    idx = np.argsort(np.abs(contrib))[::-1][:top_k]
+
+    top = pd.DataFrame(
+        {
+            "feature": np.array(feature_names, dtype=object)[idx].astype(str),
+            "impact": contrib[idx].astype(float),
+        }
+    )
+
+    top["feature"] = top["feature"].apply(prettify_feature_name)
+    return top
 
 
 # ----------------------------
@@ -94,7 +116,7 @@ def load_background_sample(n: int = 200, seed: int = 42) -> pd.DataFrame:
 # ----------------------------
 st.set_page_config(page_title="Churn Predictor", layout="centered")
 st.title("Customer Churn Prediction (Demo)")
-st.caption("Predict churn probability and show approximate explanations using SHAP.")
+st.caption("Predict churn probability and show top drivers (linear model contributions).")
 
 pipe = load_pipeline()
 
@@ -132,35 +154,34 @@ PaymentMethod = st.selectbox(
 MonthlyCharges = st.number_input("Monthly Charges", min_value=0.0, max_value=200.0, value=70.0)
 TotalCharges = st.number_input("Total Charges", min_value=0.0, max_value=10000.0, value=1000.0)
 
-X = pd.DataFrame([{
-    "gender": gender,
-    "SeniorCitizen": SeniorCitizen,
-    "Partner": Partner,
-    "Dependents": Dependents,
-    "tenure": tenure,
-    "PhoneService": PhoneService,
-    "MultipleLines": MultipleLines,
-    "InternetService": InternetService,
-    "OnlineSecurity": OnlineSecurity,
-    "OnlineBackup": OnlineBackup,
-    "DeviceProtection": DeviceProtection,
-    "TechSupport": TechSupport,
-    "StreamingTV": StreamingTV,
-    "StreamingMovies": StreamingMovies,
-    "Contract": Contract,
-    "PaperlessBilling": PaperlessBilling,
-    "PaymentMethod": PaymentMethod,
-    "MonthlyCharges": MonthlyCharges,
-    "TotalCharges": TotalCharges,
-}])
+X = pd.DataFrame(
+    [
+        {
+            "gender": gender,
+            "SeniorCitizen": SeniorCitizen,
+            "Partner": Partner,
+            "Dependents": Dependents,
+            "tenure": tenure,
+            "PhoneService": PhoneService,
+            "MultipleLines": MultipleLines,
+            "InternetService": InternetService,
+            "OnlineSecurity": OnlineSecurity,
+            "OnlineBackup": OnlineBackup,
+            "DeviceProtection": DeviceProtection,
+            "TechSupport": TechSupport,
+            "StreamingTV": StreamingTV,
+            "StreamingMovies": StreamingMovies,
+            "Contract": Contract,
+            "PaperlessBilling": PaperlessBilling,
+            "PaymentMethod": PaymentMethod,
+            "MonthlyCharges": MonthlyCharges,
+            "TotalCharges": TotalCharges,
+        }
+    ]
+)
 
-
-# ----------------------------
-# Prediction + Explain
-# ----------------------------
 if st.button("Predict churn probability"):
     try:
-        # Predict
         proba = float(pipe.predict_proba(X)[:, 1][0])
         st.metric("Churn probability", f"{proba * 100:.1f}%")
         st.write("Risk level:", "HIGH" if proba >= 0.5 else "LOW")
@@ -169,38 +190,9 @@ if st.button("Predict churn probability"):
         st.subheader("Top reasons (approx.)")
         st.write("Positive impact increases churn risk; negative impact decreases it.")
 
-        # Background for SHAP (cloud safe)
-        bg_sample = load_background_sample(n=200, seed=42)
+        top = linear_contributions(pipe, X, top_k=8)
 
-        # Use probability function so SHAP can call the model
-        predict_fn = lambda df: pipe.predict_proba(df)[:, 1]
-
-        bg_sample = load_background_sample(n=200, seed=42)
-
-        explainer = shap.Explainer(predict_fn, bg_sample)
-        shap_values = explainer(X)
-
-        sv = shap_values.values[0]
-        feature_names = list(X.columns)  # input feature names
-
-
-        sv = shap_values.values[0]
-        feature_names = shap_values.feature_names
-
-        # Top drivers
-        top_k = 8
-        top_idx = np.argsort(np.abs(sv))[::-1][:top_k]
-
-        feature_names = X.columns.tolist()
-
-        top = pd.DataFrame({
-            "feature": np.array(feature_names)[top_idx],
-            "impact": sv[top_idx],
-        })
-
-        top["feature"] = top["feature"].astype(str).apply(prettify_feature_name)
-
-        # Cards (top 5)
+        # Cards for top 5
         top5 = top.head(5).copy()
         cols = st.columns(5)
 
