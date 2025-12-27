@@ -195,7 +195,7 @@ top = pd.DataFrame({
 
 
                 # Make features human-friendly
-        top["feature"] = top["feature"].astype(str).apply(prettify_feature_name)
+top["feature"] = top["feature"].astype(str).apply(prettify_feature_name)
 
         # Cards for top 5
         top5 = top.head(5).copy()
