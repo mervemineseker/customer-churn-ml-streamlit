@@ -201,16 +201,16 @@ top["feature"] = top["feature"].astype(str).apply(prettify_feature_name)
 top5 = top.head(5).copy()
 cols = st.columns(5)
 
-        for i, (_, row) in enumerate(top5.iterrows()):
-            label = str(row["feature"])
-            impact = float(row["impact"])
+for i, (_, row) in enumerate(top5.iterrows()):
+label = str(row["feature"])
+impact = float(row["impact"])
 
-            direction = "Increases risk" if impact > 0 else "Decreases risk"
-            emoji = icon_for_feature(label)
+direction = "Increases risk" if impact > 0 else "Decreases risk"
+emoji = icon_for_feature(label)
 
-            with cols[i]:
-                st.markdown(
-                    f"""
+with cols[i]:
+st.markdown(
+f"""
 <div style="border-radius:16px; padding:14px; border:1px solid rgba(0,0,0,0.12);">
   <div style="font-size:22px; line-height:1;">{emoji}</div>
   <div style="margin-top:6px; font-weight:600;">{label}</div>
