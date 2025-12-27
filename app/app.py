@@ -42,6 +42,7 @@ def load_pipeline():
         st.warning("Model not found. Training model...")
         subprocess.run(["python", "src/train.py"], check=True)
 
+
     return joblib.load(MODEL_PATH)
 
 @st.cache_data
