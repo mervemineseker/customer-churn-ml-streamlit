@@ -1,3 +1,10 @@
+## 🚀 Live Demo
+👉 https://churn-ml-shap.streamlit.app/
+
+Interactive Streamlit app for customer churn prediction with SHAP-based explainability.
+
+
+
 \# Customer Churn Prediction (Explainable ML + Streamlit)
 
 
